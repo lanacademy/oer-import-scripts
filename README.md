@@ -27,9 +27,12 @@ Options for pages
 -----------------
 
 ###Note on titles: 
-Title: `Title of Course of Chapter` (Should equal folder if [ ]=[_] eg `/Title_of_Course_or_Chapter/`)
-or
-Title: `Title of Page` (Should equal url if [ ]=[_] eg `Title_of_Page.md`)
+Title of a page should equal the url of that page with underscores=spaces. 
+
+Examples:
+
+	Title: Title of Course of Chapter = /Title_of_Course_or_Chapter/
+	Title: Title of Page = Title_of_Page.md
 
 ###Page types:
 
