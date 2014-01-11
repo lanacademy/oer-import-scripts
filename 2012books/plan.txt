@@ -1,0 +1,22 @@
+
+
+
+
+Within a chapter:
+
+learning objectives >> 01.Title_of_page.md >> index.md
+
+paragraphs and shit >> 1.Title_of_page.md
+
+margin_term and glossterm > keywords.xml
+
+
+Key takeaways >> 1.Title_of_page.md >> #.chapter_title_review.md
+
+Exercises && >> 011.Title_of_page_questions.md
+
+
+
+
+Notes:
+	No layout.exam pages. The "exam" at the end of the chapter is just the fact the quiz on the review article is sorta cumulitive. 
