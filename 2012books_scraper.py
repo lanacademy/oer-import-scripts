@@ -42,24 +42,25 @@ def create_structure(index_scrape):
 
     os.mkdir(NEW_DIR)
     os.chdir(NEW_DIR)
-    generate_index('.', NEW_DIR.replace('_', ' '), 'course')
+    generate_template('.', 'index.md', NEW_DIR.replace('_', ' '), 'course')
     generate_chapters(index_scrape)
 
     os.chdir('..')
 
 
-def generate_index(location, title, layout, ):
-    """Generates the index.md for the entire course."""
+def generate_template(location, filename, title, layout):
+    """Generates general template with header."""
 
-    with open('%s/index.md' % location, 'w') as index:
+    with open('%s/%s' % (location, filename), 'w') as index:
         index.write('/*\n')
-        # index.write('Title: ' + NEW_DIR.replace('_', ' ') + '\n')
         index.write('Title: %s\n' % title)
         index.write('layout: %s\n' % layout)
         index.write('*/\n\n')
 
         if layout == 'chapter':
             index.write('## Chapter Learning Objectives\n\n')
+        elif layout == 'review':
+            index.write('## Key Takeaways\n\n')
 
 
 def generate_chapters(index_scrape):
@@ -78,8 +79,11 @@ def generate_chapters(index_scrape):
             chapter_name = chapter[offset:]
             chapter_dir = '%s.%s' % (chapter_num, chapter_name)
             os.mkdir(chapter_dir)
-            generate_index(chapter_dir, chapter_name.replace('_', ' '), \
-                                  'chapter')
+            generate_template(chapter_dir, 'index.md', \
+                              chapter_name.replace('_', ' '), \
+                              'chapter')
+            generate_template(chapter_dir, '%s_review.md' % chapter_dir,
+                              chapter_name.replace('_', ' '), 'review')
             generate_chapter_content(chapter_dir, index_scrape[tuple])
         else: # non-content
             try:
@@ -101,12 +105,17 @@ def generate_chapter_content(chapter_dir, sections):
 
     for i, section in enumerate(sections, 1):
         section_file = '%d.%s.md' % (i, section[0].replace(' ', '_'))
-        lesson_content, learning_obj = generate_lesson_content(section)
+        lesson_content, learning_obj, key_take = generate_lesson_content(section)
         with open('%s/%s' % (chapter_dir, section_file), 'w') as lesson:
             lesson.write(lesson_content.encode('utf-8'))
         with open('%s/index.md' % chapter_dir, 'a') as index:
             if 'None' not in learning_obj:
                 index.write(learning_obj.encode('utf-8'))
+        with open('%s/%s_review.md' % (chapter_dir, chapter_dir), 'a') as rev:
+            if 'None' not in key_take:
+                rev.write('### Section %d - %s\n\n' % (i, section[0] ))
+                rev.write(key_take.encode('utf-8'))
+                rev.write('\n\n')
 
 
 def generate_lesson_content(section):
@@ -158,7 +167,7 @@ def generate_lesson_content(section):
 
     lesson_full = """/*
 Title: %s
-layout: content
+layout: article
 */
 
 # %s
@@ -176,7 +185,7 @@ layout: content
 %s
 """ % (section[0], section[0], learning_obj, lesson_content, key_take)
 
-    return lesson_full, learning_obj
+    return lesson_full, learning_obj, key_take
 
 
 def main():
