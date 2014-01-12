@@ -80,6 +80,14 @@ def generate_chapters(index_scrape):
             except OSError:
                 pass
 
+            chapter_name = chapter_name.replace(' ', '_')
+            chapter_md = '%s.md' % chapter_name
+            non_content = generate_lesson_content(tuple)
+            if non_content == None: # if there is nothing to write, write nothing
+                continue
+            with open('Non-Content/%s' % chapter_md, 'w') as non:
+                non.write(non_content.encode('utf-8'))
+
 
 def generate_chapter_content(chapter_dir, sections):
     """Populate with chapter directories with content."""
@@ -100,7 +108,7 @@ def generate_lesson_content(section):
         try:
             learning_obj = soup.find(class_='learning_objectives').text
         except AttributeError:
-            learning_obj = ''
+            learning_obj = '*None*'
 
         # get lesson content
         # I need to get every tag whose class is either "title editable block"
@@ -127,12 +135,14 @@ def generate_lesson_content(section):
             lesson_content.append(element.text)
             lesson_content.append('\n\n')
         lesson_content = ''.join(lesson_content)
+        if lesson_content == '':
+            return None
 
         # get key takeaways
         try:
             key_take = soup.find(class_='key_takeaways editable block').p.text
         except AttributeError:
-            key_take = ''
+            key_take = '*None*'
 
     lesson_full = """/*
 Title: %s
@@ -145,7 +155,7 @@ layout: content
 
 %s
 
-## Lesson
+## Content
 
 %s
 
