@@ -93,7 +93,7 @@ def generate_chapters(index_scrape):
 
             chapter = chapter.replace(' ', '_')
             chapter_md = '%s.md' % chapter
-            non_content = generate_lesson_content(tuple)
+            non_content = parse_section(tuple)
             if non_content == None: # if there is nothing to write, write nothing
                 continue
             with open('Non-Content/%s' % chapter_md, 'w') as non:
@@ -101,12 +101,12 @@ def generate_chapters(index_scrape):
 
 
 def generate_chapter_content(chapter_dir, sections):
-    """Populate with chapter directories with content."""
+    """Populate chapter directories with content."""
 
     for i, section in enumerate(sections, 1):
-        section_file = '%d.%s.md' % (i, section[0].replace(' ', '_'))
-        lesson_content, learning_obj, key_take = generate_lesson_content(section)
-        with open('%s/%s' % (chapter_dir, section_file), 'w') as lesson:
+        section_file = '%d.%s' % (i, section[0].replace(' ', '_'))
+        lesson_content, learning_obj, key_take, exercises = parse_section(section)
+        with open('%s/%s.md' % (chapter_dir, section_file), 'w') as lesson:
             lesson.write(lesson_content.encode('utf-8'))
         with open('%s/index.md' % chapter_dir, 'a') as index:
             if 'None' not in learning_obj:
@@ -116,10 +116,19 @@ def generate_chapter_content(chapter_dir, sections):
                 rev.write('### Section %d - %s\n\n' % (i, section[0] ))
                 rev.write(key_take.encode('utf-8'))
                 rev.write('\n\n')
+        if 'None' not in exercises:
+            generate_template(chapter_dir, '%s_questions.md' % section_file, \
+                              section[0], 'questions')
+            with open('%s/%s_questions.md' % (chapter_dir, section_file), 'a') as ques:
+                ques.write(exercises.encode('utf-8'))
 
 
-def generate_lesson_content(section):
-    """Compile a string from origin lesson html to be written to new .md file"""
+def parse_section(section):
+    """
+        Parse relevant information out of the original section html file,
+        such as learning objectives, actual educational content,
+        key takeaways, and exercises.
+    """
 
     with open('../%s/%s' % (DIR, section[1]), 'r') as lesson:
         soup = BeautifulSoup(lesson.read())
@@ -165,6 +174,19 @@ def generate_lesson_content(section):
         except AttributeError:
             key_take = '*None*'
 
+        # get exercises
+        try:
+            exercises = soup.find(class_='exercises editable block')
+            exercises = exercises.find_all('li')
+            exercises_str = ['### Exercises\n']
+            for ex in exercises:
+                exercises_str.append('- ' + ex.text)
+            exercises = '\n'.join(exercises_str)
+
+        except AttributeError:
+            exercises = '*None*'
+
+        # put it all together
     lesson_full = """/*
 Title: %s
 layout: article
@@ -175,17 +197,20 @@ layout: article
 ## Learning Objectives
 
 %s
+---
 
 ## Content
 
 %s
+
+---
 
 ## Key Takeaways
 
 %s
 """ % (section[0], section[0], learning_obj, lesson_content, key_take)
 
-    return lesson_full, learning_obj, key_take
+    return lesson_full, learning_obj, key_take, exercises
 
 
 def main():
