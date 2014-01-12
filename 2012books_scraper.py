@@ -83,8 +83,11 @@ def generate_chapters(index_scrape):
 
 def generate_chapter_content(chapter_dir, sections):
     """Populate with chapter directories with content."""
-    pass
 
+    for i, section in enumerate(sections, 1):
+        section_file = '%d.%s.md' % (i, section[0].replace(' ', '_'))
+        with open(chapter_dir + '/' + section_file, 'w') as lesson:
+            lesson.write('')
 
 def main():
     if len(sys.argv) != 2:
