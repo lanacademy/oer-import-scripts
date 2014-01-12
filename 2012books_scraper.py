@@ -87,7 +87,75 @@ def generate_chapter_content(chapter_dir, sections):
     for i, section in enumerate(sections, 1):
         section_file = '%d.%s.md' % (i, section[0].replace(' ', '_'))
         with open(chapter_dir + '/' + section_file, 'w') as lesson:
-            lesson.write('')
+            lesson_content = generate_lesson_content(section)
+            lesson.write(lesson_content.encode('utf-8'))
+
+
+def generate_lesson_content(section):
+    """Compile a string from origin lesson html to be written to new .md file"""
+
+    with open('../%s/%s' % (DIR, section[1]), 'r') as lesson:
+        soup = BeautifulSoup(lesson.read())
+        # get learning objectives
+        try:
+            learning_obj = soup.find(class_='learning_objectives').text
+        except AttributeError:
+            learning_obj = ''
+
+        # get lesson content
+        # I need to get every tag whose class is either "title editable block"
+        # or "para editable block"
+        lesson_content = []
+        content_scrape = soup.find_all(class_='editable') # gets us close
+        del content_scrape[0]
+        content_scrape_2 = []
+        for element in content_scrape: # this is a really bad way of doing
+                                       # this but I can't figure out another
+                                       # way right now :(
+            if element['class'] == [u'para', u'editable', u'block'] or \
+               element['class'] == [u'title', u'editable', u'block']:
+                content_scrape_2.append(element) # finishes off the job
+
+        for element in content_scrape_2: # assemble the list
+            try:
+                element.find(class_='glossdef').decompose() # remove special definition tag
+                                                            # for vocab words
+            except AttributeError:
+                pass
+            if 'title' in element['class']:
+                lesson_content.append('### ')
+            lesson_content.append(element.text)
+            lesson_content.append('\n\n')
+        lesson_content = ''.join(lesson_content)
+
+        # get key takeaways
+        try:
+            key_take = soup.find(class_='key_takeaways editable block').p.text
+        except AttributeError:
+            key_take = ''
+
+    lesson_full = """/*
+Title: %s
+layout: content
+*/
+
+# %s
+
+## Learning Objectives
+
+%s
+
+## Lesson
+
+%s
+
+## Key Takeaways
+
+%s
+""" % (section[0], section[0], learning_obj, lesson_content, key_take)
+
+    return lesson_full
+
 
 def main():
     if len(sys.argv) != 2:
