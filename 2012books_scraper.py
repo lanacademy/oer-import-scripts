@@ -42,13 +42,13 @@ def create_structure(index_scrape):
 
     os.mkdir(NEW_DIR)
     os.chdir(NEW_DIR)
-    generate_course_index('.', NEW_DIR.replace('_', ' '), 'course')
+    generate_index('.', NEW_DIR.replace('_', ' '), 'course')
     generate_chapters(index_scrape)
 
     os.chdir('..')
 
 
-def generate_course_index(location, title, layout):
+def generate_index(location, title, layout, ):
     """Generates the index.md for the entire course."""
 
     with open('%s/index.md' % location, 'w') as index:
@@ -56,7 +56,10 @@ def generate_course_index(location, title, layout):
         # index.write('Title: ' + NEW_DIR.replace('_', ' ') + '\n')
         index.write('Title: %s\n' % title)
         index.write('layout: %s\n' % layout)
-        index.write('*/\n')
+        index.write('*/\n\n')
+
+        if layout == 'chapter':
+            index.write('## Chapter Learning Objectives\n\n')
 
 
 def generate_chapters(index_scrape):
@@ -75,9 +78,9 @@ def generate_chapters(index_scrape):
             chapter_name = chapter[offset:]
             chapter_dir = '%s.%s' % (chapter_num, chapter_name)
             os.mkdir(chapter_dir)
-            generate_chapter_content(chapter_dir, index_scrape[tuple])
-            generate_course_index(chapter_dir, chapter_name.replace('_', ' '), \
+            generate_index(chapter_dir, chapter_name.replace('_', ' '), \
                                   'chapter')
+            generate_chapter_content(chapter_dir, index_scrape[tuple])
         else: # non-content
             try:
                 os.mkdir('Non-Content')
@@ -90,7 +93,7 @@ def generate_chapters(index_scrape):
             if non_content == None: # if there is nothing to write, write nothing
                 continue
             with open('Non-Content/%s' % chapter_md, 'w') as non:
-                non.write(non_content.encode('utf-8'))
+                non.write(non_content[0].encode('utf-8'))
 
 
 def generate_chapter_content(chapter_dir, sections):
@@ -98,9 +101,12 @@ def generate_chapter_content(chapter_dir, sections):
 
     for i, section in enumerate(sections, 1):
         section_file = '%d.%s.md' % (i, section[0].replace(' ', '_'))
-        with open(chapter_dir + '/' + section_file, 'w') as lesson:
-            lesson_content = generate_lesson_content(section)
+        lesson_content, learning_obj = generate_lesson_content(section)
+        with open('%s/%s' % (chapter_dir, section_file), 'w') as lesson:
             lesson.write(lesson_content.encode('utf-8'))
+        with open('%s/index.md' % chapter_dir, 'a') as index:
+            if 'None' not in learning_obj:
+                index.write(learning_obj.encode('utf-8'))
 
 
 def generate_lesson_content(section):
@@ -110,7 +116,9 @@ def generate_lesson_content(section):
         soup = BeautifulSoup(lesson.read())
         # get learning objectives
         try:
-            learning_obj = soup.find(class_='learning_objectives').text
+            learning_obj = soup.find(class_='learning_objectives').p.text + \
+                           soup.find(class_='learning_objectives').ol.text + \
+                           '\n\n'
         except AttributeError:
             learning_obj = '*None*'
 
@@ -168,7 +176,7 @@ layout: content
 %s
 """ % (section[0], section[0], learning_obj, lesson_content, key_take)
 
-    return lesson_full
+    return lesson_full, learning_obj
 
 
 def main():
