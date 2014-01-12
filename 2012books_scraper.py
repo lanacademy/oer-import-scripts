@@ -42,19 +42,20 @@ def create_structure(index_scrape):
 
     os.mkdir(NEW_DIR)
     os.chdir(NEW_DIR)
-    generate_course_index()
+    generate_course_index('.', NEW_DIR.replace('_', ' '), 'course')
     generate_chapters(index_scrape)
 
     os.chdir('..')
 
 
-def generate_course_index():
+def generate_course_index(location, title, layout):
     """Generates the index.md for the entire course."""
 
-    with open('index.md', 'w') as index:
+    with open('%s/index.md' % location, 'w') as index:
         index.write('/*\n')
-        index.write('Title: ' + NEW_DIR.replace('_', ' ') + '\n')
-        index.write('layout: course\n')
+        # index.write('Title: ' + NEW_DIR.replace('_', ' ') + '\n')
+        index.write('Title: %s\n' % title)
+        index.write('layout: %s\n' % layout)
         index.write('*/\n')
 
 
@@ -62,26 +63,29 @@ def generate_chapters(index_scrape):
     """Generates directories and content for each course chapter."""
 
     for tuple in index_scrape:
-        (chapter_name, chapter_file) = tuple
-        if ':' in chapter_name: # if it's actual content
-            chapter_name = chapter_name.replace(' ', '_')
+        (chapter, chapter_file) = tuple
+        if ':' in chapter: # if it's actual content
+            chapter = chapter.replace(' ', '_')
             try: # get number of chapter from title
-                chapter_num = int(chapter_name[:2])
+                chapter_num = int(chapter[:2])
                 offset = 3
             except ValueError:
-                chapter_num = chapter_name[:1]
+                chapter_num = chapter[:1]
                 offset = 2
-            chapter_dir = '%s.%s' % (chapter_num, chapter_name[offset:])
+            chapter_name = chapter[offset:]
+            chapter_dir = '%s.%s' % (chapter_num, chapter_name)
             os.mkdir(chapter_dir)
             generate_chapter_content(chapter_dir, index_scrape[tuple])
+            generate_course_index(chapter_dir, chapter_name.replace('_', ' '), \
+                                  'chapter')
         else: # non-content
             try:
                 os.mkdir('Non-Content')
             except OSError:
                 pass
 
-            chapter_name = chapter_name.replace(' ', '_')
-            chapter_md = '%s.md' % chapter_name
+            chapter = chapter.replace(' ', '_')
+            chapter_md = '%s.md' % chapter
             non_content = generate_lesson_content(tuple)
             if non_content == None: # if there is nothing to write, write nothing
                 continue
