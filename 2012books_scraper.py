@@ -15,14 +15,20 @@ def parse_index(index_path):
     scrape = {}
     chapters = [chap for chap in soup.ul.contents if chap != '\n']
 
-    for chapter in chapters:
+    for chapter in chapters: # loop through chapters
         chapter_string = chapter.a.string
-        scrape[chapter_string] = []
-        if chapter.li != None:
-            for section in chapter.ul.contents:
-                if section != '\n':
-                    scrape[chapter_string].append(section.a.string)
+        chapter_file = chapter.a['href']
+        chapter_tuple = (chapter_string, chapter_file)
+        scrape[chapter_tuple] = []
+        if chapter.li != None: # filter out non-content chapters
+                               # (Preface, Acknowledgements, etc)
+            for section in chapter.find_all('li'):
+                section_string = section.a.string
+                section_file = section.a['href']
+                section_tuple = (section_string, section_file)
+                scrape[chapter_tuple].append(section_tuple)
 
+    pdb.set_trace()
     return scrape
 
 
@@ -35,6 +41,7 @@ def create_structure(dir, index_scrape):
     new_dir = dir.replace('-', '_')
     os.mkdir(new_dir)
     generate_course_index(new_dir)
+    generate_chapters(index_scrape)
 
 
 def generate_course_index(course_name):
@@ -48,6 +55,10 @@ def generate_course_index(course_name):
         index.write('*/\n')
     os.chdir('..')
 
+
+def generate_chapters(index_scrape):
+    """Generates directories and content for each course chapter."""
+    pass
 
 def main():
     if len(sys.argv) != 2:
