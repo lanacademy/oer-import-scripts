@@ -40,11 +40,13 @@ def create_structure(index_scrape):
         index.html file.
     """
 
+    global keywords # if you can think of a better way, let me know :/
+    keywords = {}
     os.mkdir(NEW_DIR)
     os.chdir(NEW_DIR)
     generate_template('.', 'index.md', NEW_DIR.replace('_', ' '), 'course')
     generate_chapters(index_scrape)
-
+    generate_keywords()
     os.chdir('..')
 
 
@@ -66,7 +68,7 @@ def generate_template(location, filename, title, layout):
 def generate_chapters(index_scrape):
     """Generates directories and content for each course chapter."""
 
-    for tuple in index_scrape:
+    for tuple in index_scrape: # for each chapter
         (chapter, chapter_file) = tuple
         if ':' in chapter: # if it's actual content
             chapter = chapter.replace(' ', '_')
@@ -127,7 +129,7 @@ def parse_section(section):
     """
         Parse relevant information out of the original section html file,
         such as learning objectives, actual educational content,
-        key takeaways, and exercises.
+        key takeaways, exercises, and keywords.
     """
 
     with open('../%s/%s' % (DIR, section[1]), 'r') as lesson:
@@ -139,6 +141,17 @@ def parse_section(section):
                            '\n\n'
         except AttributeError:
             learning_obj = '*None*'
+
+        # get keywords
+        # uses the ever unfortunate 'keywords' global variable
+        try:
+            words = soup.find_all(class_='margin_term')
+            for word in words:
+                term = word.a.text
+                definition = word.span.text
+                keywords[term] = definition
+        except AttributeError:
+            pass
 
         # get lesson content
         # I need to get every tag whose class is either "title editable block"
@@ -186,6 +199,7 @@ def parse_section(section):
         except AttributeError:
             exercises = '*None*'
 
+
         # put it all together
     lesson_full = """/*
 Title: %s
@@ -212,6 +226,20 @@ layout: article
 
     return lesson_full, learning_obj, key_take, exercises
 
+
+def generate_keywords():
+    """
+        Generates keywords.xml files based off of global 'keywords'
+        dictionary containing term/definition pairs.
+    """
+
+    with open('keywords.xml', 'w') as keyw:
+        keyw.write('<data>\n')
+        for term in sorted(keywords.keys()):
+            keyw.write('<title>%s</title>' % term.encode('utf-8'))
+            keyw.write('<text>%s</text>\n' % keywords[term].encode('utf-8'))
+        keyw.write('</data>')
+    
 
 def main():
     if len(sys.argv) != 2:
