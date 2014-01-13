@@ -112,6 +112,7 @@ def generate_chapter_content(chapter_dir, sections):
             lesson.write(lesson_content.encode('utf-8'))
         with open('%s/index.md' % chapter_dir, 'a') as index:
             if 'None' not in learning_obj:
+                index.write('### Section %d - %s\n\n' % (i, section[0] ))
                 index.write(learning_obj.encode('utf-8'))
         with open('%s/%s_review.md' % (chapter_dir, chapter_dir), 'a') as rev:
             if 'None' not in key_take:
