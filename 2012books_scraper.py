@@ -76,10 +76,10 @@ def generate_chapters(index_scrape):
                 chapter_num = int(chapter[:2])
                 offset = 3
             except ValueError:
-                chapter_num = chapter[:1]
+                chapter_num = int(chapter[:1])
                 offset = 2
             chapter_name = chapter[offset:]
-            chapter_dir = '%s.%s' % (chapter_num, chapter_name)
+            chapter_dir = '%d.%s' % (chapter_num, chapter_name)
             os.mkdir(chapter_dir)
             generate_template(chapter_dir, 'index.md', \
                               chapter_name.replace('_', ' '), \
@@ -212,6 +212,7 @@ layout: article
 ## Learning Objectives
 
 %s
+
 ---
 
 ## Content
@@ -240,7 +241,6 @@ def generate_keywords():
             keyw.write('<title>%s</title>' % term.encode('utf-8'))
             keyw.write('<text>%s</text>\n' % keywords[term].encode('utf-8'))
         keyw.write('</data>')
-    
 
 def main():
     if len(sys.argv) != 2:
