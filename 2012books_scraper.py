@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 
 def file_write(file_obj, text):
     """Utility function to ensure writing with ascii."""
-    
+
     file_obj.write(text.encode('utf-8'))
 
 def parse_index(index_path):
@@ -141,94 +141,12 @@ def parse_section(section):
 
     with open('../%s/%s' % (DIR, section[1]), 'r') as lesson:
         soup = BeautifulSoup(lesson.read())
-        # get learning objectives
-        learning_obj = []
-        
-        try:
-            learning_obj.append(soup.find(class_='learning_objectives').p.text)
-        except AttributeError:
-            pass
-        
-        try:
-            learning_obj.append(soup.find(class_='learning_objectives').ol.text)
-        except AttributeError:
-            pass
 
-        learning_obj.append('\n\n')
-
-        if learning_obj == ['\n\n']:
-            learning_obj = '*None*'
-        else:
-            learning_obj = ''.join(learning_obj)
-
-        # get keywords
-        # uses the ever unfortunate 'keywords' global variable
-        try:
-            words = soup.find_all(class_='margin_term')
-            for word in words:
-                term = word.a.text
-                definition = word.span.text
-                keywords[term] = definition
-        except AttributeError:
-            pass
-
-        # get lesson content
-        # I need to get every tag whose class is either "title editable block"
-        # or "para editable block"
-        lesson_content = []
-        content_scrape = soup.find_all(class_='editable') # gets us close
-        del content_scrape[0]
-        content_scrape_2 = []
-        for element in content_scrape: # this is a really bad way of doing
-                                       # this but I can't figure out another
-                                       # way right now :(
-            if element['class'][0] == u'para' or \
-               element['class'][0] == u'title' or \
-               element['class'][0] == u'itemizedlist':
-                content_scrape_2.append(element) # finishes off the job
-
-        for element in content_scrape_2: # assemble the list
-            try:
-                element.find(class_='glossdef').decompose() # remove special definition tag
-                                                            # for vocab words
-            except AttributeError:
-                pass
-            if 'title' in element['class']:
-                lesson_content.append('### ')
-            lesson_content.append(element.text)
-            lesson_content.append('\n\n')
-        lesson_content = ''.join(lesson_content)
-        if lesson_content == '':
-            lesson_content = '*None*'
-
-        # get key takeaways...i'm so sorry
-        try:
-            key_take = soup.find(class_='key_takeaways editable block').p.text
-            # key_take = soup.find(class_='key_takeaways editable block').text
-        except AttributeError:
-            try:
-                key_take = soup.find(class_='key_takeaways editable block').ul.text
-            except AttributeError:
-                try:
-                    key_take = soup.find(class_='key_takeaways editable block').text
-                except AttributeError:
-                    key_take = '*None*'
-
-        # get exercises
-        try:
-            exercises = soup.find(class_='exercises editable block')
-            exercises_str = ['### Exercises\n']
-            exercises_li = exercises.find_all('li')
-            if exercises_li == []:
-                exercises_str.append('- ' + exercises.find('p').text)
-            else:
-                for ex in exercises_li:
-                    exercises_str.append('- ' + ex.text)
-        except AttributeError: 
-            exercises = '*None*'
-
-        if exercises != '*None*':
-            exercises = '\n'.join(exercises_str)
+        learning_obj = parse_learning_objectives(soup)
+        parse_keywords(soup)
+        lesson_content = parse_lesson_content(soup)
+        key_take = parse_key_takeaways(soup)
+        exercises = parse_exercises(soup)
 
         # put it all together
     lesson_full = """/*
@@ -270,6 +188,132 @@ def generate_keywords():
             file_write(keyw, '<title>%s</title>' % term)
             file_write(keyw, '<text>%s</text>\n' % keywords[term])
         keyw.write('</data>')
+
+
+def parse_learning_objectives(soup):
+    """
+        Given a BeautifulSoup object of an html file, parse out the
+        "learning objectives" section and return in as a string.
+    """
+
+    learning_obj = []
+
+    try:
+        learning_obj.append(soup.find(class_='learning_objectives').p.text)
+    except AttributeError:
+        pass
+
+    try:
+        learning_obj.append(soup.find(class_='learning_objectives').ol.text)
+    except AttributeError:
+        pass
+
+    learning_obj.append('\n\n')
+
+    if learning_obj == ['\n\n']:
+        learning_obj = '*None*'
+    else:
+        learning_obj = ''.join(learning_obj)
+
+    return learning_obj
+
+def parse_keywords(soup):
+    """
+        Given a BeautifulSoup object of an html file, parse out the
+        keywords and add to the ever unfortunate global keywords dictionary
+        for this course.
+    """
+
+    try:
+        words = soup.find_all(class_='margin_term')
+        for word in words:
+            term = word.a.text
+            definition = word.span.text
+            keywords[term] = definition
+    except AttributeError:
+        pass
+
+
+def parse_lesson_content(soup):
+    """
+        Given a BeautifulSoup object of an html file, parse out the
+        lesson content and return as a string.
+    """
+
+    # I need to get every tag whose class is either "title editable block"
+    # or "para editable block"
+    lesson_content = []
+    content_scrape = soup.find_all(class_='editable') # gets us close
+    del content_scrape[0]
+    content_scrape_2 = []
+    for element in content_scrape: # this is a really bad way of doing
+                                   # this but I can't figure out another
+                                   # way right now :(
+        if element['class'][0] == u'para' or \
+           element['class'][0] == u'title' or \
+           element['class'][0] == u'itemizedlist':
+            content_scrape_2.append(element) # finishes off the job
+
+    for element in content_scrape_2: # assemble the list
+        try:
+            # remove special definition tag for vocab words
+            element.find(class_='glossdef').decompose()
+        except AttributeError:
+            pass
+        if 'title' in element['class']:
+            lesson_content.append('### ')
+        lesson_content.append(element.text)
+        lesson_content.append('\n\n')
+    lesson_content = ''.join(lesson_content)
+    if lesson_content == '':
+        lesson_content = '*None*'
+
+    return lesson_content
+
+def parse_key_takeaways(soup):
+    """
+        Given a BeautifulSoup object of an html file, parse out the
+        "key takeaways" section and return as a string.
+    """
+
+    # i am so sorry
+    try:
+        key_take = soup.find(class_='key_takeaways editable block').ul.text
+    except AttributeError:
+        try:
+            key_take = soup.find(class_='key_takeaways editable block').p.text
+        except AttributeError:
+            try:
+                key_take = soup.find(class_='key_takeaways editable block').text
+            except AttributeError:
+                key_take = '*None*'
+
+    return key_take
+
+
+def parse_exercises(soup):
+    """
+        Given a BeautifulSoup object of an html file, parse out the
+        "exercises" section and return as a string.
+    """
+
+    try:
+        exercises = soup.find(class_='exercises editable block')
+        exercises_str = ['### Exercises\n']
+        exercises_li = exercises.find_all('li')
+        if exercises_li == []:
+            exercises_str.append('- ' + exercises.find('p').text)
+        else:
+            for ex in exercises_li:
+                exercises_str.append('- ' + ex.text)
+    except AttributeError:
+        exercises = '*None*'
+
+    if exercises != '*None*':
+        exercises = '\n'.join(exercises_str)
+
+    return exercises
+
 
 def main():
     if len(sys.argv) != 2:
