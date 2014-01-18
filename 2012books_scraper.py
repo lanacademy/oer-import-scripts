@@ -3,6 +3,7 @@
 import os
 import sys
 import shutil
+import re
 from bs4 import BeautifulSoup
 
 
@@ -17,8 +18,8 @@ def parse_index(index_path):
 
     for chapter in chapters: # loop through chapters
         chapter_string = chapter.a.string
-        if ':' in chapter_string:
-            chapter_string = chapter_string[8:] # get ride of 'Chapter'
+        if 'Chapter' in chapter_string:
+            chapter_string = chapter_string.replace('Chapter ', '') # get ride of 'Chapter'
             chapter_string = chapter_string.replace(' ', '', 1) # delete space after colon
         chapter_file = chapter.a['href']
         chapter_tuple = (chapter_string, chapter_file)
@@ -70,7 +71,8 @@ def generate_chapters(index_scrape):
 
     for tuple in index_scrape: # for each chapter
         (chapter, chapter_file) = tuple
-        if ':' in chapter: # if it's actual content
+        # if ':' in chapter: # if it's actual content
+        if re.search('^[0-9]+:', chapter): # if it's actual content (has #:)
             chapter = chapter.replace(' ', '_')
             try: # get number of chapter from title
                 chapter_num = int(chapter[:2])
