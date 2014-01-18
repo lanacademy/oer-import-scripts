@@ -7,11 +7,15 @@ import re
 from bs4 import BeautifulSoup
 
 
+def file_write(file_obj, text):
+    """Utility function to ensure writing with ascii."""
+    
+    file_obj.write(text.encode('utf-8'))
+
 def parse_index(index_path):
     """Parses index.html file for chapters and sections."""
 
-    index_file = open(index_path)
-    soup = BeautifulSoup(index_file.read())
+    soup = BeautifulSoup(open(index_path))
     scrape = {}
     chapters = [chap for chap in soup.ul.contents if chap != '\n']
     # chapters now contains a list of chapters (bs4 li elements)
@@ -56,8 +60,8 @@ def generate_template(location, filename, title, layout):
 
     with open('%s/%s' % (location, filename), 'w') as index:
         index.write('/*\n')
-        index.write('Title: %s\n' % title)
-        index.write('layout: %s\n' % layout)
+        file_write(index, 'Title: %s\n' % title)
+        file_write(index, 'layout: %s\n' % layout)
         index.write('*/\n\n')
 
         if layout == 'chapter':
@@ -101,7 +105,7 @@ def generate_chapters(index_scrape):
             if non_content == None: # if there is nothing to write, write nothing
                 continue
             with open('Non-Content/%s' % chapter_md, 'w') as non:
-                non.write(non_content[0].encode('utf-8'))
+                file_write(non, non_content[0])
 
 
 def generate_chapter_content(chapter_dir, sections):
@@ -111,21 +115,21 @@ def generate_chapter_content(chapter_dir, sections):
         section_file = '%d.%s' % (i, section[0].replace(' ', '_'))
         lesson_content, learning_obj, key_take, exercises = parse_section(section)
         with open('%s/%s.md' % (chapter_dir, section_file), 'w') as lesson:
-            lesson.write(lesson_content.encode('utf-8'))
+            file_write(lesson, lesson_content)
         with open('%s/index.md' % chapter_dir, 'a') as index:
             if 'None' not in learning_obj:
-                index.write('### Section %d - %s\n\n' % (i, section[0] ))
-                index.write(learning_obj.encode('utf-8'))
+                file_write(index, '### Section %d - %s\n\n' % (i, section[0]))
+                file_write(index, learning_obj)
         with open('%s/%s_review.md' % (chapter_dir, chapter_dir), 'a') as rev:
             if 'None' not in key_take:
-                rev.write('### Section %d - %s\n\n' % (i, section[0] ))
-                rev.write(key_take.encode('utf-8'))
+                file_write(rev, '### Section %d - %s\n\n' % (i, section[0]))
+                file_write(rev, key_take)
                 rev.write('\n\n')
         if 'None' not in exercises:
             generate_template(chapter_dir, '%s_questions.md' % section_file, \
                               section[0], 'questions')
             with open('%s/%s_questions.md' % (chapter_dir, section_file), 'a') as ques:
-                ques.write(exercises.encode('utf-8'))
+                file_write(ques, exercises)
 
 
 def parse_section(section):
@@ -138,12 +142,24 @@ def parse_section(section):
     with open('../%s/%s' % (DIR, section[1]), 'r') as lesson:
         soup = BeautifulSoup(lesson.read())
         # get learning objectives
+        learning_obj = []
+        
         try:
-            learning_obj = soup.find(class_='learning_objectives').p.text + \
-                           soup.find(class_='learning_objectives').ol.text + \
-                           '\n\n'
+            learning_obj.append(soup.find(class_='learning_objectives').p.text)
         except AttributeError:
+            pass
+        
+        try:
+            learning_obj.append(soup.find(class_='learning_objectives').ol.text)
+        except AttributeError:
+            pass
+
+        learning_obj.append('\n\n')
+
+        if learning_obj == ['\n\n']:
             learning_obj = '*None*'
+        else:
+            learning_obj = ''.join(learning_obj)
 
         # get keywords
         # uses the ever unfortunate 'keywords' global variable
@@ -166,8 +182,9 @@ def parse_section(section):
         for element in content_scrape: # this is a really bad way of doing
                                        # this but I can't figure out another
                                        # way right now :(
-            if element['class'] == [u'para', u'editable', u'block'] or \
-               element['class'] == [u'title', u'editable', u'block']:
+            if element['class'][0] == u'para' or \
+               element['class'][0] == u'title' or \
+               element['class'][0] == u'itemizedlist':
                 content_scrape_2.append(element) # finishes off the job
 
         for element in content_scrape_2: # assemble the list
@@ -182,26 +199,36 @@ def parse_section(section):
             lesson_content.append('\n\n')
         lesson_content = ''.join(lesson_content)
         if lesson_content == '':
-            return None
+            lesson_content = '*None*'
 
-        # get key takeaways
+        # get key takeaways...i'm so sorry
         try:
             key_take = soup.find(class_='key_takeaways editable block').p.text
+            # key_take = soup.find(class_='key_takeaways editable block').text
         except AttributeError:
-            key_take = '*None*'
+            try:
+                key_take = soup.find(class_='key_takeaways editable block').ul.text
+            except AttributeError:
+                try:
+                    key_take = soup.find(class_='key_takeaways editable block').text
+                except AttributeError:
+                    key_take = '*None*'
 
         # get exercises
         try:
             exercises = soup.find(class_='exercises editable block')
-            exercises = exercises.find_all('li')
             exercises_str = ['### Exercises\n']
-            for ex in exercises:
-                exercises_str.append('- ' + ex.text)
-            exercises = '\n'.join(exercises_str)
-
-        except AttributeError:
+            exercises_li = exercises.find_all('li')
+            if exercises_li == []:
+                exercises_str.append('- ' + exercises.find('p').text)
+            else:
+                for ex in exercises_li:
+                    exercises_str.append('- ' + ex.text)
+        except AttributeError: 
             exercises = '*None*'
 
+        if exercises != '*None*':
+            exercises = '\n'.join(exercises_str)
 
         # put it all together
     lesson_full = """/*
@@ -240,8 +267,8 @@ def generate_keywords():
     with open('keywords.xml', 'w') as keyw:
         keyw.write('<data>\n')
         for term in sorted(keywords.keys()):
-            keyw.write('<title>%s</title>' % term.encode('utf-8'))
-            keyw.write('<text>%s</text>\n' % keywords[term].encode('utf-8'))
+            file_write(keyw, '<title>%s</title>' % term)
+            file_write(keyw, '<text>%s</text>\n' % keywords[term])
         keyw.write('</data>')
 
 def main():
