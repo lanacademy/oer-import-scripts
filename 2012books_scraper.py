@@ -12,6 +12,7 @@ def file_write(file_obj, text):
 
     file_obj.write(text.encode('utf-8'))
 
+
 def parse_index(index_path):
     """Parses index.html file for chapters and sections."""
 
@@ -28,7 +29,7 @@ def parse_index(index_path):
         chapter_file = chapter.a['href']
         chapter_tuple = (chapter_string, chapter_file)
         scrape[chapter_tuple] = []
-        if chapter.li != None: # filter out non-content chapters
+        if chapter.li: # filter out non-content chapters
                                # (Preface, Acknowledgements, etc)
             for section in chapter.find_all('li'):
                 section_string = section.a.string
@@ -75,7 +76,6 @@ def generate_chapters(index_scrape):
 
     for tuple in index_scrape: # for each chapter
         (chapter, chapter_file) = tuple
-        # if ':' in chapter: # if it's actual content
         if re.search('^[0-9]+:', chapter): # if it's actual content (has #:)
             chapter = chapter.replace(' ', '_')
             try: # get number of chapter from title
@@ -87,9 +87,8 @@ def generate_chapters(index_scrape):
             chapter_name = chapter[offset:]
             chapter_dir = '%d.%s' % (chapter_num, chapter_name)
             os.mkdir(chapter_dir)
-            generate_template(chapter_dir, 'index.md', \
-                              chapter_name.replace('_', ' '), \
-                              'chapter')
+            generate_template(chapter_dir, 'index.md',
+                              chapter_name.replace('_', ' '), 'chapter')
             generate_template(chapter_dir, '%s_review.md' % chapter_dir,
                               chapter_name.replace('_', ' '), 'review')
             generate_chapter_content(chapter_dir, index_scrape[tuple])
@@ -102,7 +101,7 @@ def generate_chapters(index_scrape):
             chapter = chapter.replace(' ', '_')
             chapter_md = '%s.md' % chapter
             non_content = parse_section(tuple)
-            if non_content == None: # if there is nothing to write, write nothing
+            if not non_content: # if there is nothing to write, write nothing
                 continue
             with open('Non-Content/%s' % chapter_md, 'w') as non:
                 file_write(non, non_content[0])
@@ -113,22 +112,24 @@ def generate_chapter_content(chapter_dir, sections):
 
     for i, section in enumerate(sections, 1):
         section_file = '%d.%s' % (i, section[0].replace(' ', '_'))
-        lesson_content, learning_obj, key_take, exercises = parse_section(section)
+        lesson_content, learning_obj, key_take, exercises \
+            = parse_section(section)
         with open('%s/%s.md' % (chapter_dir, section_file), 'w') as lesson:
             file_write(lesson, lesson_content)
         with open('%s/index.md' % chapter_dir, 'a') as index:
-            if 'None' not in learning_obj:
+            if  learning_obj != '*None*':
                 file_write(index, '### Section %d - %s\n\n' % (i, section[0]))
                 file_write(index, learning_obj)
         with open('%s/%s_review.md' % (chapter_dir, chapter_dir), 'a') as rev:
-            if 'None' not in key_take:
+            if key_take != '*None*':
                 file_write(rev, '### Section %d - %s\n\n' % (i, section[0]))
                 file_write(rev, key_take)
                 rev.write('\n\n')
-        if 'None' not in exercises:
-            generate_template(chapter_dir, '%s_questions.md' % section_file, \
+        if exercises != '*None*':
+            generate_template(chapter_dir, '%s_questions.md' % section_file,
                               section[0], 'questions')
-            with open('%s/%s_questions.md' % (chapter_dir, section_file), 'a') as ques:
+            with open('%s/%s_questions.md' % (chapter_dir, section_file),
+                      'a') as ques:
                 file_write(ques, exercises)
 
 
@@ -233,7 +234,7 @@ def parse_lesson_content(soup):
     # way right now :(
     for element in content_scrape:
         element_class = element['class'][0]
-        if element_class in [u'para', u'title', u'itemizedlist', \
+        if element_class in [u'para', u'title', u'itemizedlist',
                              u'orderedlist']:
             content_scrape_2.append(element) # finishes off the job
         elif element_class == u'callout' or element_class == u'blockquote':
@@ -253,7 +254,7 @@ def parse_lesson_content(soup):
         except (AttributeError, TypeError):
             pass
 
-        try: 
+        try:
             if 'list' in element['class'][0]:
                 for li in element.find_all('li'):
                     li_text = li.text.replace('\n', '')
@@ -265,7 +266,7 @@ def parse_lesson_content(soup):
         lesson_content.append('\n\n')
 
     lesson_content = ''.join(lesson_content)
-    if lesson_content == '':
+    if not lesson_content:
         lesson_content = '*None*'
     else:
         lesson_content = lesson_content.replace('\n\n\n', '')
