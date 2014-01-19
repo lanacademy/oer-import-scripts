@@ -258,7 +258,6 @@ def parse_lesson_content(soup):
             content_scrape_2.append(element) # finishes off the job
         elif element_class == u'callout' or element_class == u'blockquote':
             content_scrape_2.append('```')
-            import pdb; pdb.set_trace()
             content_scrape_2.append(element)
             content_scrape_2.append('```')
 
@@ -293,17 +292,22 @@ def parse_key_takeaways(soup):
         "key takeaways" section and return as a string.
     """
 
-    # i am so sorry
     try:
-        key_take = soup.find(class_='key_takeaways editable block').ul.text
+        key_take = soup.find(class_='key_takeaways editable block').p.text
     except AttributeError:
-        try:
-            key_take = soup.find(class_='key_takeaways editable block').ol.text
-        except AttributeError:
-            try:
-                key_take = soup.find(class_='key_takeaways editable block').p.text
-            except AttributeError:
-                key_take = '*None*'
+        kt = soup.find(class_='key_takeaways editable block')
+
+        if kt:
+            kt = kt.find_all('li')
+        else:
+            return '*None*'
+
+        key_take = []
+        for li in kt:
+            li_text = li.text.replace('\n', '')
+            key_take.append('- %s\n' % li_text)
+        key_take = ''.join(key_take)
+
 
     return key_take
 
