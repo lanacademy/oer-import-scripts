@@ -240,35 +240,52 @@ def parse_lesson_content(soup):
         lesson content and return as a string.
     """
 
+    lesson_content = []
+
     # I need to get every tag whose class is either "title editable block"
     # or "para editable block"
-    lesson_content = []
-    content_scrape = soup.find_all(class_='editable') # gets us close
+    content_scrape = soup.find_all(class_='block') # gets us close
     del content_scrape[0]
     content_scrape_2 = []
-    for element in content_scrape: # this is a really bad way of doing
-                                   # this but I can't figure out another
-                                   # way right now :(
-        if element['class'][0] == u'para' or \
-           element['class'][0] == u'title' or \
-           element['class'][0] == u'itemizedlist':
-            content_scrape_2.append(element) # finishes off the job
 
-    for element in content_scrape_2: # assemble the list
+    # this is a really bad way of doing this but I can't figure out another
+    # way right now :(
+    for element in content_scrape:
+        element_class = element['class'][0]
+        if element_class == u'para' or \
+           element_class == u'title' or \
+           element_class == u'itemizedlist':
+            content_scrape_2.append(element) # finishes off the job
+        elif element_class == u'callout' or element_class == u'blockquote':
+            content_scrape_2.append('```')
+            import pdb; pdb.set_trace()
+            content_scrape_2.append(element)
+            content_scrape_2.append('```')
+
+    for element in content_scrape_2: # assemble the list with strings
         try:
             # remove special definition tag for vocab words
             element.find(class_='glossdef').decompose()
-        except AttributeError:
+        except (AttributeError, TypeError):
             pass
-        if 'title' in element['class']:
-            lesson_content.append('### ')
-        lesson_content.append(element.text)
+        try:
+            if 'title' in element['class']:
+                lesson_content.append('### ')
+        except (AttributeError, TypeError):
+            pass
+
+        try: # this case is for any "```"'s that might appear for code fences
+            lesson_content.append(element.text)
+        except (AttributeError, TypeError):
+            lesson_content.append(element)
         lesson_content.append('\n\n')
+
     lesson_content = ''.join(lesson_content)
     if lesson_content == '':
         lesson_content = '*None*'
 
     return lesson_content
+
 
 def parse_key_takeaways(soup):
     """
@@ -281,10 +298,10 @@ def parse_key_takeaways(soup):
         key_take = soup.find(class_='key_takeaways editable block').ul.text
     except AttributeError:
         try:
-            key_take = soup.find(class_='key_takeaways editable block').p.text
+            key_take = soup.find(class_='key_takeaways editable block').ol.text
         except AttributeError:
             try:
-                key_take = soup.find(class_='key_takeaways editable block').text
+                key_take = soup.find(class_='key_takeaways editable block').p.text
             except AttributeError:
                 key_take = '*None*'
 
