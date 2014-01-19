@@ -195,27 +195,8 @@ def parse_learning_objectives(soup):
         Given a BeautifulSoup object of an html file, parse out the
         "learning objectives" section and return in as a string.
     """
+    return parse_key_takeaways(soup, 'learning_objectives')
 
-    learning_obj = []
-
-    try:
-        learning_obj.append(soup.find(class_='learning_objectives').p.text)
-    except AttributeError:
-        pass
-
-    try:
-        learning_obj.append(soup.find(class_='learning_objectives').ol.text)
-    except AttributeError:
-        pass
-
-    learning_obj.append('\n\n')
-
-    if learning_obj == ['\n\n']:
-        learning_obj = '*None*'
-    else:
-        learning_obj = ''.join(learning_obj)
-
-    return learning_obj
 
 def parse_keywords(soup):
     """
@@ -252,14 +233,13 @@ def parse_lesson_content(soup):
     # way right now :(
     for element in content_scrape:
         element_class = element['class'][0]
-        if element_class == u'para' or \
-           element_class == u'title' or \
-           element_class == u'itemizedlist':
+        if element_class in [u'para', u'title', u'itemizedlist', \
+                             u'orderedlist']:
             content_scrape_2.append(element) # finishes off the job
         elif element_class == u'callout' or element_class == u'blockquote':
-            content_scrape_2.append('```')
+            content_scrape_2.append('```\n')
             content_scrape_2.append(element)
-            content_scrape_2.append('```')
+            content_scrape_2.append('\n```')
 
     for element in content_scrape_2: # assemble the list with strings
         try:
@@ -273,8 +253,13 @@ def parse_lesson_content(soup):
         except (AttributeError, TypeError):
             pass
 
-        try: # this case is for any "```"'s that might appear for code fences
-            lesson_content.append(element.text)
+        try: 
+            if 'list' in element['class'][0]:
+                for li in element.find_all('li'):
+                    li_text = li.text.replace('\n', '')
+                    lesson_content.append('- %s\n' % li_text)
+            else:
+                lesson_content.append(element.text)
         except (AttributeError, TypeError):
             lesson_content.append(element)
         lesson_content.append('\n\n')
@@ -282,20 +267,27 @@ def parse_lesson_content(soup):
     lesson_content = ''.join(lesson_content)
     if lesson_content == '':
         lesson_content = '*None*'
+    else:
+        lesson_content = lesson_content.replace('\n\n\n', '')
 
     return lesson_content
 
 
-def parse_key_takeaways(soup):
+def parse_key_takeaways(soup, clas='key_takeaways editable block'):
     """
         Given a BeautifulSoup object of an html file, parse out the
         "key takeaways" section and return as a string.
+
+        Since parse_learnings_objectives is basically the same function,
+        there is an optional parameter for what class to parse by.
     """
 
     try:
-        key_take = soup.find(class_='key_takeaways editable block').p.text
-    except AttributeError:
-        kt = soup.find(class_='key_takeaways editable block')
+        key_take = soup.find(class_=clas).p.text
+        if soup.find(class_=clas).li:
+            raise Exception
+    except (AttributeError, Exception):
+        kt = soup.find(class_=clas)
 
         if kt:
             kt = kt.find_all('li')
@@ -306,8 +298,8 @@ def parse_key_takeaways(soup):
         for li in kt:
             li_text = li.text.replace('\n', '')
             key_take.append('- %s\n' % li_text)
+        key_take.append('\n')
         key_take = ''.join(key_take)
-
 
     return key_take
 
@@ -322,11 +314,14 @@ def parse_exercises(soup):
         exercises = soup.find(class_='exercises editable block')
         exercises_str = ['### Exercises\n']
         exercises_li = exercises.find_all('li')
-        if exercises_li == []:
-            exercises_str.append('- ' + exercises.find('p').text)
+        if not exercises_li:
+            exercises_p = exercises.find('p').text
+            exercises_p = exercises_p.replace('\n', '')
+            exercises_str.append('- %s\n' % exercises_p)
         else:
             for ex in exercises_li:
-                exercises_str.append('- ' + ex.text)
+                ex_text = ex.text.replace('\n', '')
+                exercises_str.append('- %s\n' % ex_text)
     except AttributeError:
         exercises = '*None*'
 
