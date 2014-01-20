@@ -49,6 +49,7 @@ def create_structure(index_scrape):
     global keywords # if you can think of a better way, let me know :/
     keywords = {}
     os.mkdir(NEW_DIR)
+    os.mkdir(NEW_DIR + '/media')
     os.chdir(NEW_DIR)
     generate_template('.', 'index.md', NEW_DIR.replace('_', ' '), 'course')
     generate_chapters(index_scrape)
@@ -245,6 +246,9 @@ def parse_lesson_content(soup):
             content_scrape_2.append('```\n')
             content_scrape_2.append(element)
             content_scrape_2.append('\n```')
+        elif element_class == u'informalfigure':
+            img_filename = element.img['src']
+            shutil.copy('../%s/%s' % (DIR, img_filename), 'media')
 
     for element in content_scrape_2: # assemble the list with strings
         try:
