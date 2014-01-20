@@ -242,13 +242,21 @@ def parse_lesson_content(soup):
         if element_class in [u'para', u'title', u'itemizedlist',
                              u'orderedlist']:
             content_scrape_2.append(element) # finishes off the job
-        elif element_class == u'callout' or element_class == u'blockquote':
+        elif element_class in [u'callout', u'blockquote']:
             content_scrape_2.append('```\n')
             content_scrape_2.append(element)
             content_scrape_2.append('\n```')
-        elif element_class == u'informalfigure':
-            img_filename = element.img['src']
-            shutil.copy('../%s/%s' % (DIR, img_filename), 'media')
+        elif element_class in [u'informalfigure', u'figure']:
+            img_filename_full = element.img['src']
+            img_filename = img_filename_full.split('/')[1]
+            if element.p:
+                img_description = element.p.text
+            else:
+                img_description = '*No Description*'
+            shutil.copy('../%s/%s' % (DIR, img_filename_full), 'media')
+            content_scrape_2.append('\n\n\n![](%s)\n> %s\n\n\n' % \
+                                    ('../media/%s' % img_filename,
+                                     img_description))
 
     for element in content_scrape_2: # assemble the list with strings
         try:
