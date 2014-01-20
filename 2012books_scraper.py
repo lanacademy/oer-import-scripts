@@ -69,6 +69,8 @@ def generate_template(location, filename, title, layout):
             index.write('## Chapter Learning Objectives\n\n')
         elif layout == 'review':
             index.write('## Key Takeaways\n\n')
+        elif layout == 'questions':
+            index.write('## Exercises\n\n')
 
 
 def generate_chapters(index_scrape):
@@ -117,14 +119,13 @@ def generate_chapter_content(chapter_dir, sections):
         with open('%s/%s.md' % (chapter_dir, section_file), 'w') as lesson:
             file_write(lesson, lesson_content)
         with open('%s/index.md' % chapter_dir, 'a') as index:
-            if  learning_obj != '*None*':
-                file_write(index, '### Section %d - %s\n\n' % (i, section[0]))
-                file_write(index, learning_obj)
+            file_write(index, '### Section %d - %s\n\n' % (i, section[0]))
+            file_write(index, learning_obj)
+            index.write('\n\n')
         with open('%s/%s_review.md' % (chapter_dir, chapter_dir), 'a') as rev:
-            if key_take != '*None*':
-                file_write(rev, '### Section %d - %s\n\n' % (i, section[0]))
-                file_write(rev, key_take)
-                rev.write('\n\n')
+            file_write(rev, '### Section %d - %s\n\n' % (i, section[0]))
+            file_write(rev, key_take)
+            rev.write('\n\n')
         if exercises != '*None*':
             generate_template(chapter_dir, '%s_questions.md' % section_file,
                               section[0], 'questions')
@@ -195,6 +196,9 @@ def parse_learning_objectives(soup):
     """
         Given a BeautifulSoup object of an html file, parse out the
         "learning objectives" section and return in as a string.
+
+        Since parse_key_takeaways performs essentially identical
+        behavior, we'll just piggyback off it.
     """
     return parse_key_takeaways(soup, 'learning_objectives')
 
@@ -279,13 +283,15 @@ def parse_key_takeaways(soup, clas='key_takeaways editable block'):
         Given a BeautifulSoup object of an html file, parse out the
         "key takeaways" section and return as a string.
 
-        Since parse_learnings_objectives is basically the same function,
-        there is an optional parameter for what class to parse by.
+        Since parse_learnings_objectives, and parse_exercises
+        are basically the same function, there is an optional parameter
+        for what class to parse by.
     """
 
     try:
         key_take = soup.find(class_=clas).p.text
-        if soup.find(class_=clas).li:
+        if soup.find(class_=clas).li: # if there's a list too, it's probably
+                                      # what we want
             raise Exception
     except (AttributeError, Exception):
         kt = soup.find(class_=clas)
@@ -309,27 +315,11 @@ def parse_exercises(soup):
     """
         Given a BeautifulSoup object of an html file, parse out the
         "exercises" section and return as a string.
+
+        Since parse_key_takeaways performs essentially identical
+        behavior, we'll just piggyback off it.
     """
-
-    try:
-        exercises = soup.find(class_='exercises editable block')
-        exercises_str = ['### Exercises\n']
-        exercises_li = exercises.find_all('li')
-        if not exercises_li:
-            exercises_p = exercises.find('p').text
-            exercises_p = exercises_p.replace('\n', '')
-            exercises_str.append('- %s\n' % exercises_p)
-        else:
-            for ex in exercises_li:
-                ex_text = ex.text.replace('\n', '')
-                exercises_str.append('- %s\n' % ex_text)
-    except AttributeError:
-        exercises = '*None*'
-
-    if exercises != '*None*':
-        exercises = '\n'.join(exercises_str)
-
-    return exercises
+    return parse_key_takeaways(soup, 'exercises editable block')
 
 
 def main():
