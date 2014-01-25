@@ -12,6 +12,16 @@ def file_write(file_obj, text):
 
     file_obj.write(text.encode('utf-8'))
 
+def prepare_name(text):
+    """
+        Utility function to remove colons and commas from to be created
+        directory and fileneames.
+    """
+
+    for punc in [',', ':', '(', ')', ';']:
+        text = text.replace(punc, '')
+
+    return text
 
 def parse_index(index_path):
     """Parses index.html file for chapters and sections."""
@@ -89,6 +99,7 @@ def generate_chapters(index_scrape):
                 offset = 2
             chapter_name = chapter[offset:]
             chapter_dir = '%d.%s' % (chapter_num, chapter_name)
+            chapter_dir = prepare_name(chapter_dir)
             os.mkdir(chapter_dir)
             generate_template(chapter_dir, 'index.md',
                               chapter_name.replace('_', ' '), 'chapter')
@@ -115,6 +126,7 @@ def generate_chapter_content(chapter_dir, sections):
 
     for i, section in enumerate(sections, 1):
         section_file = '%d.%s' % (i, section[0].replace(' ', '_'))
+        section_file = prepare_name(section_file)
         lesson_content, learning_obj, key_take, exercises \
             = parse_section(section)
         with open('%s/%s.md' % (chapter_dir, section_file), 'w') as lesson:
