@@ -12,6 +12,7 @@ def file_write(file_obj, text):
 
     file_obj.write(text.encode('utf-8'))
 
+
 def prepare_name(text):
     """
         Utility function to remove colons and commas from to be created
@@ -22,6 +23,7 @@ def prepare_name(text):
         text = text.replace(punc, '')
 
     return text
+
 
 def parse_index(index_path):
     """Parses index.html file for chapters and sections."""
@@ -269,6 +271,13 @@ def parse_lesson_content(soup):
             content_scrape_2.append('\n\n\n![](%s)\n> %s\n\n\n' % \
                                     ('../media/%s' % img_filename,
                                      img_description))
+        elif element_class in [u'informalequation']:
+            content_scrape_2.append('```\n*cannot display equation*\n```\n')
+        elif element_class in [u'table']:
+            try:
+                content_scrape_2.append(str(element).encode('utf-8'))
+            except UnicodeError:
+                pass
 
     for element in content_scrape_2: # assemble the list with strings
         try:
@@ -278,7 +287,7 @@ def parse_lesson_content(soup):
             pass
         try:
             if 'title' in element['class']:
-                lesson_content.append('### ')
+                lesson_content.append('\n### ')
         except (AttributeError, TypeError):
             pass
 
@@ -297,7 +306,7 @@ def parse_lesson_content(soup):
     if not lesson_content:
         lesson_content = '*None*'
     else:
-        lesson_content = lesson_content.replace('\n\n\n', '')
+        lesson_content = lesson_content.replace('\n\n\n\n', '\n\n')
 
     return lesson_content
 
