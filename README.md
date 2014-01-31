@@ -24,10 +24,19 @@ Requirements/ Usage
     - If you have `pip` on your system you can install it by simply
       running `pip install -r requirements.txt`
 
+To use `2012books_scraper.py`, go to [2012 Books](http://2012books.lardbucket.org)
+and download a course as a zip file. Unzip it into the same directory as the
+script. Ensure that you have BeautifulSoup (see above), and then simply run
+
+    $ ./2012books_scraper.py [unzipped directory]
+
+and it will produced another directory containing the book with directories
+for each chapter, etc.
 
 Known Bugs
 -----------
-Todo
+
+See the [issues](http://github.com/lanacademy/oer-import-scripts/issues).
 
 Options for pages
 -----------------
